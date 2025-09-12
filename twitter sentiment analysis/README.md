@@ -25,5 +25,7 @@ Improved conversational AI systems within digital commerce environments
 
 ## Tools & Techniques
 Programming & Frameworks: Python, TensorFlow, Scikit-learn, Apache Spark
+
 NLP & ML: Natural Language Processing, Sentiment Analysis, Text Classification, Scalable Machine Learning
+
 Visualization & Reporting: Power BI, Data Visualization
