@@ -21,7 +21,3 @@ Welcome to a collection of diverse data science, machine learning, and analytics
 - **Twitter Sentiment Analysis**
   - Classifies tweets for positive/negative/neutral sentiment using NLP and scikit-learn pipelines.
   - Includes preprocessing, feature extraction, and accuracy scoring[4].
-
-## Getting Started
-
-1. Clone the repository:
