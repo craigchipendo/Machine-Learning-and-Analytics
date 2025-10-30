@@ -4,7 +4,7 @@
 
 This repository contains a visual dashboard summarizing results from a mental health survey conducted in Zimbabwe. The dashboard presents key insights on the mental health status, barriers to access, and demographic profiles of survey respondents.
 
-![Dashboard Screenshot](image.jpg)
+
 <img width="2127" height="1201" alt="image" src="https://github.com/user-attachments/assets/a45437e8-a356-4fcf-bdef-f866d199d6c5" />
 
 
