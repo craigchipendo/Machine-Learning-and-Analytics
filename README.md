@@ -21,12 +21,12 @@ Welcome to a collection of diverse data science, machine learning, and analytics
 - Aggregates and visualizes Zimbabwean mental health survey responses in an interactive dashboard. 
 - Highlights perceived barriers, causes, demographic breakdowns, and financial aspects related to mental health access and outcomes.   
 
-- <img width="2127" height="1201" alt="image" src="https://github.com/user-attachments/assets/930ec953-ce14-4878-b3a7-571bede2cded" />
+  <img width="2127" height="1201" alt="image" src="https://github.com/user-attachments/assets/930ec953-ce14-4878-b3a7-571bede2cded" />
 
 ### Crime Analysis Dashboard
 - Tableau dashboard built on multi-country crime incident data (2021–2023), leveraging fact and lookup tables for crime types.  
 - Visualizes yearly and monthly trends, geographic hotspots, crime-type distributions, and resolution performance with interactive filters for date, country, and status.
-- <img
+  <img
   width="2127"
   height="1201"
   alt="Crime Analysis Dashboard"
@@ -36,7 +36,7 @@ Welcome to a collection of diverse data science, machine learning, and analytics
 ### Uber Ride Analytics
 - R Markdown–driven analysis of the **Uber Ride Analytics Dataset 2024** from Kaggle, focusing on bookings, revenue, vehicle mix, and cancellations. 
 - Produces ggplot2-based visuals and a polished infographic summarizing revenue realized vs. lost, payment-method revenue, vehicle performance, and cancellation patterns by hour and weekday.
-- <img
+  <img
   width="2127"
   height="1201"
   alt="Uber Analytics"
