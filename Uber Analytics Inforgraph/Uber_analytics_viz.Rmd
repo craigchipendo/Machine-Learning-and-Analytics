@@ -1,0 +1,495 @@
+---
+title: "Uber Ride Analytics Infographic Report"
+author: "Craig Tanaka Chipendo"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+    latex_engine: xelatex
+    fig_caption: true
+---
+
+
+```{r, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(stringr)
+library(lubridate)
+library(scales)
+library(forcats)
+library(gt)
+
+# Set global chunk options 
+knitr::opts_chunk$set(
+  echo = TRUE,       
+  warning = FALSE,   
+  message = FALSE    
+)
+```
+
+```{r}
+df <- read.csv("ncr_ride_bookings.csv")
+```
+
+```{r}
+head(df)
+```
+
+```{r}
+df %>%
+  ggplot(aes(x = `Booking.Status`)) +
+  geom_bar(fill = "#2E86C1") +
+  labs(
+    title = "Distribution of Booking Status",
+    x = "Booking Status",
+    y = "Number of Bookings"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+```{r}
+df <- df %>%
+  mutate(
+    Driver.Cancellation.Reason = as.character(Driver.Cancellation.Reason),
+    Driver.Cancellation.Reason = str_trim(Driver.Cancellation.Reason),
+    
+    Driver.Cancellation.Reason = na_if(Driver.Cancellation.Reason, "null"),
+    Driver.Cancellation.Reason = na_if(Driver.Cancellation.Reason, "NULL"),
+    Driver.Cancellation.Reason = na_if(Driver.Cancellation.Reason, ""),
+    
+    Driver.Cancellation.Reason = replace_na(Driver.Cancellation.Reason, "Unknown Reason")
+  )
+ggplot(df, aes(x = `Driver.Cancellation.Reason`)) +
+  geom_bar(fill = "#3498DB") +
+  labs(
+    title = "Driver Cancellation Reasons",
+    x = "Reason",
+    y = "Number of times"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+df <- df %>%
+  mutate(
+    Reason.for.cancelling.by.Customer = as.character(Reason.for.cancelling.by.Customer),
+    Reason.for.cancelling.by.Customer = str_trim(Reason.for.cancelling.by.Customer),
+    
+    Reason.for.cancelling.by.Customer = na_if(Reason.for.cancelling.by.Customer, "null"),
+    Reason.for.cancelling.by.Customer = na_if(Reason.for.cancelling.by.Customer, "NULL"),
+    Reason.for.cancelling.by.Customer = na_if(Reason.for.cancelling.by.Customer, ""),
+    
+    Reason.for.cancelling.by.Customer = replace_na(Reason.for.cancelling.by.Customer, "Unknown Reason")
+  )
+ggplot(df, aes(x = `Reason.for.cancelling.by.Customer`)) +
+  geom_bar(fill = "#3498DB") +
+  labs(
+    title = "Reason for cancelling by Customer",
+    x = "Reason",
+    y = "Number of times"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+```{r}
+df <- df %>%
+  mutate(
+    Incomplete.Rides.Reason = as.character(Incomplete.Rides.Reason),
+    Incomplete.Rides.Reason = str_trim(Incomplete.Rides.Reason),
+    
+    Incomplete.Rides.Reason = na_if(Incomplete.Rides.Reason, "null"),
+    Incomplete.Rides.Reason = na_if(Incomplete.Rides.Reason, "NULL"),
+    Incomplete.Rides.Reason = na_if(Incomplete.Rides.Reason, ""),
+    
+    Incomplete.Rides.Reason = replace_na(Incomplete.Rides.Reason, "Unknown Reason")
+  )
+ggplot(df, aes(x = `Driver.Cancellation.Reason`)) +
+  geom_bar(fill = "#3498DB") +
+  labs(
+    title = "Driver Cancellation Reasons",
+    x = "Reason",
+    y = "Number of times"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+
+
+# --- 1) Clean text and convert Booking.Value to numeric ---
+df_clean <- df %>%
+  mutate(across(everything(), ~ {
+    x <- as.character(.)
+    x <- str_trim(x)
+    x[x %in% c("null", "NULL", "", "NaN", "NA", "N/A")] <- NA_character_
+    x
+  })) %>%
+  mutate(
+    Booking.Value.num = parse_number(Booking.Value),
+    Incomplete.Rides.num = suppressWarnings(as.integer(Incomplete.Rides))
+  )
+
+# --- 2) Create status group ---
+if ("Booking.Status" %in% names(df_clean)) {
+  df_clean <- df_clean %>%
+    mutate(status_group = if_else(
+      str_to_title(Booking.Status) == "Completed",
+      "Completed", "Cancelled/Other"
+    ))
+} else {
+  df_clean <- df_clean %>%
+    mutate(status_group = if_else(
+      !is.na(Incomplete.Rides.num) & Incomplete.Rides.num > 0,
+      "Cancelled/Other", "Completed"
+    ))
+}
+
+# --- 3) Compute revenue realized vs lost ---
+df_clean <- df_clean %>%
+  mutate(
+    revenue_realized = if_else(status_group == "Completed", Booking.Value.num, 0),
+    revenue_lost     = if_else(status_group != "Completed", Booking.Value.num, 0)
+  )
+
+# --- 4) Summarize totals ---
+rev_summary <- df_clean %>%
+  summarise(
+    `Revenue Realized (Completed)` = sum(revenue_realized, na.rm = TRUE),
+    `Revenue Lost (Cancelled)`     = sum(revenue_lost,     na.rm = TRUE)
+  ) %>%
+  pivot_longer(everything(), names_to = "type", values_to = "revenue")
+
+print(rev_summary)
+
+# --- 5) Plot with revenue labels ---
+p1 <- ggplot(rev_summary, aes(x = type, y = revenue)) +
+  geom_col(fill = "#2E86C1", width = 0.6, show.legend = FALSE) + 
+  geom_text(
+    aes(label = dollar(revenue)),
+    vjust = -0.5, size = 5, fontface = "bold"
+  ) +
+  scale_y_continuous(labels = dollar, expand = expansion(mult = c(0, 0.1))) +
+  labs(
+    title = "Revenue Realized vs Revenue Lost",
+    subtitle = "Based on Completed vs Cancelled Bookings",
+    x = NULL,
+    y = "Total Revenue"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 15, hjust = 1),
+    plot.title = element_text(face = "bold")
+  )
+
+print(p1)
+
+ggsave(
+  filename = "revenue_realized_vs_lost.png",  
+  plot = p1,                                  
+  width = 8, height = 5,                     
+  dpi = 300                                  
+)
+```
+
+```{r}
+df_clean <- df %>%
+  mutate(
+    `Payment.Method` = str_trim(as.character(`Payment.Method`)),
+    `Payment.Method` = na_if(`Payment.Method`, "null"),
+    `Payment.Method` = na_if(`Payment.Method`, "NULL"),
+    `Booking.Value` = as.numeric(`Booking.Value`)
+  ) %>%
+  filter(!is.na(`Payment.Method`))
+
+# Summarize total revenue by payment type
+revenue_summary <- df_clean %>%
+  group_by(`Payment.Method`) %>%
+  summarise(total_revenue = sum(`Booking.Value`, na.rm = TRUE)) %>%
+  arrange(desc(total_revenue))
+
+# Plot without null values
+p2 <- ggplot(revenue_summary, aes(x = `Payment.Method`, y = total_revenue)) +
+  geom_col(fill = "#2E86C1") +
+  geom_text(
+    aes(label = dollar(total_revenue)),
+    vjust = -0.3,
+    size = 4.2,
+    fontface = "bold"
+  ) +
+  labs(
+    title = "Total Revenue by Payment Method",
+    x = "Payment Method",
+    y = "Total Revenue"
+  ) +
+  scale_y_continuous(labels = dollar, expand = expansion(mult = c(0, 0.1))) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    plot.title = element_text(face = "bold", size = 16)
+  )
+
+print(p2)
+
+ggsave(
+  filename = "total_revenue_by_payment_method.png",  
+  plot = p2,                                  
+  width = 8, height = 5,                     
+  dpi = 300                                  
+)
+
+```
+
+```{r}
+# ---------- 1) Normalize columns (handles spaces vs. dots + "null") ----------
+df1 <- df %>%
+  mutate(across(everything(), ~{
+    x <- as.character(.)
+    x <- str_trim(x)
+    x[x %in% c("null","NULL","","NaN","NA","N/A","-",".")] <- NA_character_
+    x
+  })) %>%
+  mutate(
+    vehicle_type = coalesce(`Vehicle.Type`, Vehicle.Type),
+    booking_value = parse_number(coalesce(`Booking.Value`, Booking.Value)),
+    distance = suppressWarnings(as.numeric(coalesce(`Ride.Distance`, Ride.Distance))),
+    booking_status = str_to_title(coalesce(`Booking.Status`, Booking.Status))
+  ) %>%
+  mutate(completed = !is.na(booking_status) & booking_status == "Completed")
+
+# ---------- 2) Aggregate per vehicle type ----------
+vehicle_tbl <- df1 %>%
+  filter(!is.na(vehicle_type)) %>%
+  group_by(vehicle_type) %>%
+  summarise(
+    total_booking  = sum(booking_value, na.rm = TRUE),
+    success_booking = sum(if_else(completed, booking_value, 0), na.rm = TRUE),
+    avg_distance   = mean(distance, na.rm = TRUE),
+    total_distance = sum(distance, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(desc(total_booking)) %>%
+  mutate(icon = case_when(
+    str_detect(str_to_lower(vehicle_type), "mini")   ~ "🚗",
+    str_detect(str_to_lower(vehicle_type), "sedan")  ~ "🚙",
+    str_detect(str_to_lower(vehicle_type), "xl|suv") ~ "🚐",
+    str_detect(str_to_lower(vehicle_type), "auto|tuk") ~ "🛺",
+    str_detect(str_to_lower(vehicle_type), "bike")   ~ "🛵",
+    TRUE ~ "🚕"
+  )) %>%
+  mutate(vehicle_display = paste(icon, vehicle_type)) %>%
+  select(
+    vehicle_display,
+    total_booking, success_booking, avg_distance, total_distance
+  )
+
+# ---------- 3) Build gt table that looks like your mockup ----------
+gt_tbl <- vehicle_tbl %>%
+  gt() %>%
+  cols_label(
+    vehicle_display = "Vehicle Type",
+    total_booking   = "Total Booking\nvalue",
+    success_booking = "Success Booking\nvalue",
+    avg_distance    = "Avg Distance\nTravelled",
+    total_distance  = "Total Distance\nTravelled"
+  ) %>%
+  fmt_number(columns = avg_distance, decimals = 2) %>%
+  fmt_number(columns = total_distance, suffixing = TRUE, decimals = 0) %>%
+  fmt_number(columns = c(total_booking, success_booking), suffixing = TRUE, decimals = 2) %>%
+  tab_header(title = md("**Vehicle Performance Summary**")) %>%
+  tab_options(
+    table.font.size = px(16),
+    data_row.padding = px(8),
+    column_labels.font.weight = "bold",
+    heading.title.font.size = px(22)
+  ) %>%
+  tab_style(
+    style = cell_borders(sides = "all", color = "grey40", weight = px(1)),
+    locations = list(cells_body(), cells_column_labels())
+  )
+
+gt_tbl
+```
+
+```{r}
+SAVE   <- FALSE            
+OUTDIR <- "charts"
+if (SAVE && !dir.exists(OUTDIR)) dir.create(OUTDIR, recursive = TRUE)
+
+# =========================
+# 1) Feature engineering
+# =========================
+Date_col <- dplyr::coalesce(df$Date, df$`Date`)
+Time_col <- dplyr::coalesce(df$Time, df$`Time`)
+
+dt_chr <- str_trim(paste0(Date_col, " ", Time_col))
+dt     <- suppressWarnings(parse_date_time(dt_chr,
+                                           orders = c("Ymd HMS","Y-m-d H:M:S",
+                                                      "m/d/Y H:M:S","d/m/Y H:M:S",
+                                                      "Ymd HM","Y-m-d H:M",
+                                                      "m/d/Y H:M","d/m/Y H:M"),
+                                           tz = "UTC"))
+
+df1 <- df %>%
+  mutate(
+    .dt   = dt,
+    hour  = hour(.dt),
+    dow   = wday(.dt, week_start = 1) - 1,    
+    month = month(.dt),
+    weekday_name = factor(weekdays(.dt),
+                          levels = c("Monday","Tuesday","Wednesday",
+                                     "Thursday","Friday","Saturday","Sunday")),
+    month_name = factor(months(.dt),
+                        levels = month.name)
+  ) %>%
+  filter(!is.na(hour), !is.na(dow), !is.na(month))
+
+# =========================
+# 2) Cancellation flag
+# =========================
+status <- str_trim(as.character(dplyr::coalesce(df1$`Booking.Status`, df1$Booking.Status)))
+
+COMPLETED_LABEL <- "Completed"
+CANCEL_SET <- c("Cancelled by Driver",
+                "Cancelled by Customer",
+                "No Driver Found",
+                "Incomplete")
+
+df1 <- df1 %>%
+  mutate(is_cancelled = status %in% CANCEL_SET)
+
+# =========================
+# 3) Aggregation helpers
+# =========================
+count_rate <- function(data, key) {
+  data %>%
+    group_by({{ key }}) %>%
+    summarise(
+      total   = n(),
+      cancels = sum(is_cancelled, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(cancel_rate = as.numeric(cancels) / pmax(total, 1) * 100)
+}
+
+by_hour  <- count_rate(df1, hour) %>% arrange(hour)
+
+by_week  <- count_rate(df1, weekday_name) %>%
+  mutate(weekday_name = fct_relevel(weekday_name,
+                                    "Monday","Tuesday","Wednesday",
+                                    "Thursday","Friday","Saturday","Sunday")) %>%
+  arrange(weekday_name)
+
+by_month <- count_rate(df1, month_name) %>%
+  mutate(month_name = fct_relevel(month_name, month.name)) %>%
+  arrange(month_name) %>%
+  filter(!is.na(total))
+
+# =========================
+# 4) Plot helper
+# =========================
+bar_plot <- function(dat, x, y, title, xlabel, ylabel, rotation = 0, fname = NULL) {
+  p <- ggplot(dat, aes({{ x }}, {{ y }})) +
+    geom_col(fill = "#2E86C1") +
+    labs(title = title, x = xlabel, y = ylabel) +
+    theme_minimal() +
+    theme(
+      axis.text.x = element_text(angle = rotation, hjust = ifelse(rotation==0, 0.5, 1))
+    ) +
+    scale_y_continuous(
+      labels = label_number(scale_cut = cut_si("")),
+      expand = expansion(mult = c(0, 0.05))
+    )
+  if (SAVE && !is.null(fname)) ggsave(file.path(OUTDIR, fname), p, dpi = 150, width = 9, height = 5)
+  p
+}
+
+# =========================
+# 5) COUNT charts
+# =========================
+bar_plot(by_hour,  hour, cancels,
+         "Cancellations by Hour (Count)", "Hour (0–23)", "Cancellations",
+         rotation = 0, fname = "cxl_count_by_hour.png")
+
+bar_plot(by_week,  weekday_name, cancels,
+         "Cancellations by Weekday (Count)", "Weekday", "Cancellations",
+         rotation = 0, fname = "cxl_count_by_weekday.png")
+
+bar_plot(by_month, month_name, cancels,
+         "Cancellations by Month (Count)", "Month", "Cancellations",
+         rotation = 45, fname = "cxl_count_by_month.png")
+
+# =========================
+# 6) RATE charts (%)
+# =========================
+bar_plot(by_hour,  hour, cancel_rate,
+         "Cancellation Rate by Hour (%)", "Hour (0–23)", "Rate (%)",
+         rotation = 0, fname = "cxl_rate_by_hour.png")
+
+bar_plot(by_week,  weekday_name, cancel_rate,
+         "Cancellation Rate by Weekday (%)", "Weekday", "Rate (%)",
+         rotation = 0, fname = "cxl_rate_by_weekday.png")
+
+bar_plot(by_month, month_name, cancel_rate,
+         "Cancellation Rate by Month (%)", "Month", "Rate (%)",
+         rotation = 45, fname = "cxl_rate_by_month.png")
+
+# =========================
+# 7) Heatmap: cancellation RATE (weekday × hour)
+# =========================
+rate_grid <- df1 %>%
+  group_by(weekday_name, hour) %>%
+  summarise(rate = mean(is_cancelled, na.rm = TRUE) * 100, .groups = "drop") %>%
+  complete(weekday_name = factor(c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"),
+                                 levels = c("Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday")),
+           hour = 0:23)
+
+p_heat <- ggplot(rate_grid, aes(x = hour, y = weekday_name, fill = rate)) +
+  geom_tile() +
+  scale_fill_gradient(name = "Cancellation Rate (%)", low = "#f0f9e8", high = "#08589e", na.value = "grey90") +
+  labs(title = "Cancellation Rate Heatmap (%): Weekday × Hour",
+       x = "Hour (0–23)", y = "Weekday") +
+  theme_minimal()
+if (SAVE) ggsave(file.path(OUTDIR, "cxl_rate_heatmap_weekday_by_hour.png"),
+                 p_heat, dpi = 150, width = 10, height = 5)
+p_heat
+
+
+ggsave(
+  filename = "cancellation_rate_heatmap.png",  
+  plot = p_heat,                                  
+  width = 8, height = 5,                     
+  dpi = 300                                  
+)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
