@@ -1,7 +1,15 @@
 # Uber Ride Analytics
 
 ## Overview
-This project analyzes operational and financial patterns in Uber ride data using R and produces an infographic-style summary of key insights. The analysis focuses on revenue realized vs. revenue lost, revenue distribution by payment method, vehicle-type performance, and cancellation behavior over time of day and weekday. The final outputs are a set of ggplot2 charts and a composite infographic (`Inforgraph.jpg`) suitable for presentations and executive summaries.
+This project analyzes operational and financial patterns in Uber ride data using R and produces an infographic-style summary of key insights. The analysis focuses on revenue realized vs. revenue lost, revenue distribution by payment method, vehicle-type performance, and cancellation behavior over time of day and weekday. The final outputs are a set of ggplot2 charts and a composite infographic suitable for presentations and executive summaries.
+
+<img
+  width="1201"
+  height="2127"
+  alt="Inforgraph"
+  src="./Inforgraph.png"
+/>
+
 
 ## Data
 The project uses the **Uber Ride Analytics Dataset 2024** (Kaggle). The raw dataset contains:
@@ -114,7 +122,6 @@ The combined infographic is intended for:
 - Executive briefings on Uber ride performance and cancellations.  
 - Product and operations reviews focused on vehicle mix, pricing, and service reliability.  
 - Demonstrating end-to-end data wrangling and visualization capability in R (from raw CSV to polished infographic).
-
 
 
 
