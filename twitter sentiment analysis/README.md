@@ -1,31 +1,38 @@
-# Sentiment Analysis Pipeline for E-Commerce Customer Insights
+# Twitter Sentiment Analysis: Classical ML vs. LSTM
 
 ## Overview
-Led the end-to-end development of a natural language processing pipeline to analyze and classify customer sentiment from X (Twitter) posts related to e-commerce brands and products. This project demonstrates practical experience in NLP model development, text mining, and leveraging large-scale data for business impact.
+An NLP pipeline that classifies the sentiment (positive or negative) of X (Twitter) posts. The same approach can be used to track customer sentiment toward brands and products. The project compares classical machine learning models on TF-IDF features with a deep learning model (LSTM on Word2Vec embeddings), trained on about 1.5 million labelled tweets.
 
-## Technical Implementation
-Utilized Python frameworks including TensorFlow and Scikit-learn for model development
+## Data
+- **Training set:** 1,523,975 tweets (767,059 negative, 756,916 positive)
+- **Test set:** 359 tweets (177 negative, 182 positive), after removing neutral labels
+- **Preprocessing:** removed blanks, duplicates and neutral test labels; cleaned text (mentions, URLs, non-alphanumeric characters); lemmatization; explored sentence lengths and unknown tokens with a `distilroberta-base` tokenizer
 
-Implemented Apache Spark for scalable data processing and distributed model training
+## Models
+### Classical models (scikit-learn)
+TF-IDF vectorizer (word 1-2 grams), then:
 
-Engineered both deep learning and classical machine learning models for:
+| Model | Test accuracy | Macro F1 |
+|---|---:|---:|
+| Bernoulli Naive Bayes | 0.83 | 0.83 |
+| Linear SVC | 0.82 | 0.82 |
+| Logistic Regression | 0.82 | 0.82 |
 
-Text classification
+### Deep learning model (Keras / TensorFlow)
+- **Word2Vec embeddings** (gensim): 300 dimensions, window 7, vocabulary of 33,070 words, used as a frozen embedding layer
+- **Architecture:** Embedding, Dropout (0.5), **LSTM** (100 units, dropout 0.2), Dense (sigmoid)
+- **Training:** 1 epoch, batch size 1,024, 10% validation split, reduce-learning-rate and early-stopping callbacks (about 8 hours on CPU)
+- **Results:** validation accuracy 0.764; **test accuracy 0.811**
+- Prediction function maps the score to NEGATIVE / NEUTRAL / POSITIVE using thresholds (0.4, 0.7)
 
-Information extraction
+## Key finding
+On this test set, the simpler TF-IDF + Naive Bayes model (0.83) slightly outperformed the LSTM (0.81). The LSTM was trained for only one epoch, so more training and a larger test set would be the next steps before choosing a model.
 
-Sentiment polarity prediction
+## Files
+- `Exploring Data.ipynb`: data cleaning and exploration
+- `Twitter.ipynb`: classical models, Word2Vec + LSTM model, evaluation and prediction
+- `Sentiment-LR.pickle`, `Sentiment-BNB.pickle`: saved classical models
+- `Sentiment-LSTM.pickle`: saved LSTM training history
 
-## Business Impact
-Generated meaningful sentiment trend visualizations using Power BI
-
-Provided cross-functional teams with actionable insights to enhance customer support strategies
-
-Improved conversational AI systems within digital commerce environments
-
-## Tools & Techniques
-Programming & Frameworks: Python, TensorFlow, Scikit-learn, Apache Spark
-
-NLP & ML: Natural Language Processing, Sentiment Analysis, Text Classification, Scalable Machine Learning
-
-Visualization & Reporting: Power BI, Data Visualization
+## Tools
+Python, pandas, NumPy, scikit-learn, TensorFlow / Keras, gensim (Word2Vec), NLTK, Hugging Face Transformers (tokenizer), Matplotlib, Seaborn
